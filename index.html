@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a237e">
+  <meta name="description" content="ロシア語キリル文字入力用Webキーボード。スマホ・PCでロシア語を入力できます。">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RU Keyboard">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <title>ロシア語キリル文字キーボード</title>
+</head>
+<body>
+  <header>
+    <span class="logo">Я</span>
+    <h1>
+      ロシア語キーボード
+      <small>Russian Cyrillic Keyboard</small>
+    </h1>
+  </header>
+
+  <div class="output-section">
+    <div class="output-wrapper">
+      <div id="output" aria-label="入力テキスト" aria-live="polite"></div>
+    </div>
+    <div class="char-count" id="char-count">0 文字</div>
+    <div class="output-actions">
+      <button class="btn btn-copy" id="btn-copy" type="button">📋 コピー</button>
+      <button class="btn btn-clear" id="btn-clear" type="button">🗑 クリア</button>
+    </div>
+  </div>
+
+  <div class="keyboard-section">
+    <div class="keyboard" id="keyboard" role="group" aria-label="キリル文字キーボード"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

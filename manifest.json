@@ -1,0 +1,24 @@
+{
+  "name": "ロシア語キリル文字キーボード",
+  "short_name": "RU Keyboard",
+  "description": "ロシア語キリル文字を入力するためのWebキーボード",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a237e",
+  "theme_color": "#1a237e",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
