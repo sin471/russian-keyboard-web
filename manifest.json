@@ -2,7 +2,7 @@
   "name": "ロシア語キリル文字キーボード",
   "short_name": "RU Keyboard",
   "description": "ロシア語キリル文字を入力するためのWebキーボード",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a237e",
   "theme_color": "#1a237e",
