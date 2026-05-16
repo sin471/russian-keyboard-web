@@ -4,7 +4,7 @@ const ROWS = [
   ['й','ц','у','к','е','н','г','ш','щ','з','х','ъ'],
   ['ф','ы','в','а','п','р','о','л','д','ж','э'],
   ['shift','я','ч','с','м','и','т','ь','б','ю','.','backspace'],
-  ['ё','space','—']
+  ['ё','space','—','enter']
 ];
 
 const UPPER = {
@@ -213,6 +213,19 @@ function buildKeyboard() {
           e.preventDefault();
           btn.classList.add('pressed');
           insert('—');
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
+
+      } else if (k === 'enter') {
+        btn.className += ' special enter-key';
+        btn.textContent = '↵';
+        btn.title = '改行';
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          btn.classList.add('pressed');
+          insertAtCursor('\n');
+          outputEl.focus();
         });
         btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
         btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));

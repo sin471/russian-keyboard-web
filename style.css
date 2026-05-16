@@ -363,6 +363,20 @@ header h1 small {
 
 .key.yo-key { font-size: 14px; }
 
+.key.enter-key {
+  flex: 1.8;
+  max-width: 88px;
+  font-size: 20px;
+  background: #3949ab;
+  color: #fff;
+  border-color: #283593;
+}
+
+.key.enter-key:active, .key.enter-key.pressed {
+  background: #283593;
+  border-color: #1a237e;
+}
+
 /* ── Notch / home indicator ── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .keyboard-section {
