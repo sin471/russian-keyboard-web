@@ -4,7 +4,7 @@ const ROWS = [
   ['й','ц','у','к','е','н','г','ш','щ','з','х','ъ'],
   ['ф','ы','в','а','п','р','о','л','д','ж','э'],
   ['shift','я','ч','с','м','и','т','ь','б','ю','.','backspace'],
-  ['ё','space','—']
+  ['ё','space','—','enter']
 ];
 
 const UPPER = {
@@ -85,12 +85,10 @@ function backspaceAtCursor() {
   const val   = outputEl.value;
 
   if (start !== end) {
-    // Delete selection
     outputEl.value = val.slice(0, start) + val.slice(end);
     outputEl.selectionStart = outputEl.selectionEnd = start;
   } else {
     if (start === 0) return;
-    // Delete grapheme before cursor (handle surrogate pairs)
     const before = [...val.slice(0, start)];
     before.pop();
     const newBefore = before.join('');
@@ -103,11 +101,9 @@ function backspaceAtCursor() {
 // ── Insert from virtual key ────────────────────────────
 function insert(char) {
   const ch = (shiftActive || shiftLocked) ? (UPPER[char] || char.toUpperCase()) : char;
-  // Save cursor position before any possible focus change
   const savedStart = outputEl.selectionStart;
   const savedEnd   = outputEl.selectionEnd;
   outputEl.focus();
-  // Restore selection (focus() may reset it to end)
   outputEl.selectionStart = savedStart;
   outputEl.selectionEnd   = savedEnd;
   insertAtCursor(ch);
@@ -217,6 +213,19 @@ function buildKeyboard() {
         btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
         btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
 
+      } else if (k === 'enter') {
+        btn.className += ' special enter-key';
+        btn.textContent = '↵';
+        btn.title = '改行';
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          btn.classList.add('pressed');
+          insertAtCursor('\n');
+          outputEl.focus();
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
+
       } else {
         btn.dataset.char = k;
         btn.textContent = k;
@@ -272,5 +281,4 @@ if ('serviceWorker' in navigator) {
 // ── Init ───────────────────────────────────────────────
 buildKeyboard();
 updateCharCount();
-// Auto-focus so cursor is visible from the start
 outputEl.focus();
