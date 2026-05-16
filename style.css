@@ -30,9 +30,11 @@ html {
   background: var(--bg);
 }
 
+/* Mobile first: body fills exactly the viewport, no scrolling */
 body {
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100dvh;
+  height: 100vh; /* fallback */
+  overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: #1a237e;
@@ -176,25 +178,41 @@ header h1 small {
   color: #fff;
 }
 
-/* ── Output section ── */
+/* ── Output section ──
+   On mobile: grows to fill the space between header and keyboard.
+   The textarea stretches inside it so there's no dead gap. */
 .output-section {
-  padding: 12px 12px 8px;
-  flex-shrink: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 8px;
+  overflow: hidden;
 }
 
 .output-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--output-bg);
   border: 2px solid var(--output-border);
   border-radius: 12px;
   padding: 10px 12px;
   box-shadow: 0 2px 8px var(--key-shadow);
+  overflow: hidden;
+}
+
+.output-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.15), 0 2px 8px var(--key-shadow);
 }
 
 #output {
+  flex: 1 1 0;
+  min-height: 0;
   display: block;
   width: 100%;
-  min-height: 80px;
-  max-height: 160px;
   overflow-y: auto;
   font-size: 20px;
   font-family: 'Georgia', serif;
@@ -206,14 +224,8 @@ header h1 small {
   resize: none;
   background: transparent;
   caret-color: var(--accent);
-  caret-width: 2px;
   user-select: text;
   -webkit-user-select: text;
-}
-
-.output-wrapper:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.15), 0 2px 8px var(--key-shadow);
 }
 
 #output::placeholder {
@@ -223,6 +235,7 @@ header h1 small {
 }
 
 .char-count {
+  flex-shrink: 0;
   text-align: right;
   font-size: 11px;
   color: #9fa8da;
@@ -231,6 +244,7 @@ header h1 small {
 }
 
 .output-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 8px;
   margin-top: 8px;
@@ -261,13 +275,11 @@ header h1 small {
 .btn-copy { background: var(--btn-copy); color: var(--btn-text); }
 .btn-clear { background: var(--btn-clear); color: var(--btn-text); }
 
-/* ── Keyboard section ── */
+/* ── Keyboard section ──
+   On mobile: natural height, sits at the bottom (no flex-grow). */
 .keyboard-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 4px 6px 8px;
+  flex-shrink: 0;
+  padding: 6px 6px 8px;
   background: var(--kbd-bg);
   border-top: 1px solid var(--output-border);
 }
@@ -275,12 +287,12 @@ header h1 small {
 .keyboard {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .key-row {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   justify-content: center;
 }
 
@@ -288,7 +300,7 @@ header h1 small {
   flex: 1;
   min-width: 0;
   max-width: 52px;
-  height: 44px;
+  height: 42px;
   background: var(--key-bg);
   border: 1px solid var(--key-border);
   border-bottom: 3px solid var(--key-border);
@@ -351,53 +363,77 @@ header h1 small {
 
 .key.yo-key { font-size: 14px; }
 
-/* ── Tablet / Desktop ── */
+/* ── Notch / home indicator ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .keyboard-section {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Tablet (600px+) ── */
 @media (min-width: 600px) {
   header h1 { font-size: 18px; }
   header h1 small { font-size: 13px; }
 
-  .output-section { padding: 16px 20px 12px; }
+  .output-section { padding: 14px 20px 10px; }
 
-  #output {
-    min-height: 100px;
-    max-height: 200px;
-    font-size: 22px;
-  }
+  #output { font-size: 22px; }
 
   .keyboard-section { padding: 8px 20px 16px; }
 
-  .key { height: 48px; font-size: 20px; max-width: 60px; }
-  .key.shift-key, .key.backspace-key { max-width: 80px; }
-  .key.space-key { max-width: 260px; }
+  .key { height: 46px; font-size: 20px; max-width: 58px; }
+  .key.shift-key, .key.backspace-key { max-width: 78px; }
+  .key.space-key { max-width: 250px; }
 }
 
+/* ── Desktop (900px+) ──
+   Restore scrollable layout: output fixed height, keyboard at bottom. */
 @media (min-width: 900px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
   .output-section {
-    width: 100%;
+    flex: 0 0 auto;
+    overflow: visible;
     max-width: var(--content-max);
+    width: 100%;
     margin: 0 auto;
     padding: 20px 0 12px;
   }
 
-  /* width: 100% is essential — without it the flex child shrinks to content */
+  .output-wrapper {
+    flex: none;
+    overflow: visible;
+  }
+
+  #output {
+    flex: none;
+    min-height: 100px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .keyboard-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 8px 0 16px;
+  }
+
   .keyboard {
     width: 100%;
     max-width: var(--content-max);
     margin: 0 auto;
   }
 
-  .keyboard-section { padding: 8px 0 16px; }
-
   .key { max-width: 64px; height: 52px; font-size: 22px; }
   .key.shift-key, .key.backspace-key { max-width: 90px; }
   .key.space-key { max-width: 320px; }
-}
-
-/* ── Notch / home indicator ── */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .keyboard-section {
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  }
 }
 
 /* ── Dark mode ── */
