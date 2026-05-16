@@ -22,9 +22,30 @@
     </h1>
   </header>
 
+  <div id="toast" class="toast" role="alert" aria-live="polite" aria-atomic="true"></div>
+
+  <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <p id="modal-title" class="modal-title">テキストをクリアしますか？</p>
+      <p class="modal-body">入力した内容がすべて削除されます。</p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" id="modal-cancel" type="button">キャンセル</button>
+        <button class="modal-btn modal-btn-confirm" id="modal-confirm" type="button">クリア</button>
+      </div>
+    </div>
+  </div>
+
   <div class="output-section">
     <div class="output-wrapper">
-      <div id="output" aria-label="入力テキスト" aria-live="polite"></div>
+      <textarea
+        id="output"
+        placeholder="ここにロシア語が入力されます..."
+        aria-label="入力テキスト"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+      ></textarea>
     </div>
     <div class="char-count" id="char-count">0 文字</div>
     <div class="output-actions">

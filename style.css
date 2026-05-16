@@ -8,7 +8,6 @@
   --bg: #f0f4ff;
   --header-bg: #1a237e;
   --key-bg: #ffffff;
-  --key-bg-dark: #c5cae9;
   --key-text: #1a237e;
   --key-border: #9fa8da;
   --key-shadow: rgba(26, 35, 126, 0.2);
@@ -23,25 +22,28 @@
   --kbd-bg: #e8eaf6;
   --special-key: #c5cae9;
   --shift-active: #3949ab;
+  --content-max: 700px;
 }
 
-html, body {
+html {
   height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100dvh;
+  min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: #1a237e;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
-}
-
-body {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  min-height: 100vh;
 }
 
+/* ── Header ── */
 header {
   background: var(--header-bg);
   color: white;
@@ -71,6 +73,110 @@ header h1 small {
   opacity: 0.8;
 }
 
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: #323232;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.toast-success { background: #2e7d32; }
+.toast.toast-error   { background: #c62828; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  background: var(--output-bg);
+  border-radius: 16px;
+  padding: 24px 20px 16px;
+  width: min(320px, 90vw);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  transform: scale(0.95);
+  transition: transform 0.18s;
+  user-select: none;
+}
+
+.modal-overlay.show .modal-card {
+  transform: scale(1);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a237e;
+  margin-bottom: 6px;
+}
+
+.modal-body {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.modal-btn:active { opacity: 0.75; }
+
+.modal-btn-cancel {
+  background: var(--special-key);
+  color: var(--key-text);
+}
+
+.modal-btn-confirm {
+  background: var(--btn-clear);
+  color: #fff;
+}
+
+/* ── Output section ── */
 .output-section {
   padding: 12px 12px 8px;
   flex-shrink: 0;
@@ -81,11 +187,11 @@ header h1 small {
   border: 2px solid var(--output-border);
   border-radius: 12px;
   padding: 10px 12px;
-  position: relative;
   box-shadow: 0 2px 8px var(--key-shadow);
 }
 
 #output {
+  display: block;
   width: 100%;
   min-height: 80px;
   max-height: 160px;
@@ -95,33 +201,27 @@ header h1 small {
   color: #1a1a1a;
   line-height: 1.5;
   word-break: break-all;
-  white-space: pre-wrap;
   outline: none;
   border: none;
   resize: none;
   background: transparent;
   caret-color: var(--accent);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
-#output:empty::before {
-  content: 'ここにロシア語が入力されます...';
+#output::placeholder {
   color: #9fa8da;
   font-size: 15px;
   font-family: -apple-system, sans-serif;
 }
 
-.cursor {
-  display: inline-block;
-  width: 2px;
-  height: 1.2em;
-  background: var(--accent);
-  vertical-align: text-bottom;
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+.char-count {
+  text-align: right;
+  font-size: 11px;
+  color: #9fa8da;
+  margin-top: 4px;
+  padding-right: 2px;
 }
 
 .output-actions {
@@ -152,28 +252,10 @@ header h1 small {
   transform: scale(0.97);
 }
 
-.btn-copy {
-  background: var(--btn-copy);
-  color: var(--btn-text);
-}
+.btn-copy { background: var(--btn-copy); color: var(--btn-text); }
+.btn-clear { background: var(--btn-clear); color: var(--btn-text); }
 
-.btn-clear {
-  background: var(--btn-clear);
-  color: var(--btn-text);
-}
-
-.btn-copy.copied {
-  background: #2e7d32;
-}
-
-.char-count {
-  text-align: right;
-  font-size: 11px;
-  color: #9fa8da;
-  margin-top: 4px;
-  padding-right: 2px;
-}
-
+/* ── Keyboard section ── */
 .keyboard-section {
   flex: 1;
   display: flex;
@@ -261,35 +343,9 @@ header h1 small {
   font-family: -apple-system, sans-serif;
 }
 
-.key.yo-key {
-  font-size: 14px;
-}
+.key.yo-key { font-size: 14px; }
 
-.key .sub {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 9px;
-  color: #7986cb;
-  font-family: -apple-system, sans-serif;
-  font-style: normal;
-}
-
-.long-press-indicator {
-  position: fixed;
-  background: #1a237e;
-  color: white;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 24px;
-  font-family: 'Georgia', serif;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  transform: translate(-50%, -120%);
-}
-
-/* Tablet / Desktop */
+/* ── Tablet / Desktop ── */
 @media (min-width: 600px) {
   header h1 { font-size: 18px; }
   header h1 small { font-size: 13px; }
@@ -304,38 +360,43 @@ header h1 small {
 
   .keyboard-section { padding: 8px 20px 16px; }
 
-  .key {
-    height: 48px;
-    font-size: 20px;
-    max-width: 60px;
-  }
-
+  .key { height: 48px; font-size: 20px; max-width: 60px; }
   .key.shift-key, .key.backspace-key { max-width: 80px; }
   .key.space-key { max-width: 260px; }
 }
 
 @media (min-width: 900px) {
-  body { max-width: 700px; margin: 0 auto; }
+  /* Output section centered, keyboard section full-width with bg */
+  .output-section {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    width: 100%;
+    padding: 20px 0 12px;
+  }
+
+  .keyboard {
+    max-width: var(--content-max);
+    margin: 0 auto;
+  }
 
   .key { max-width: 64px; height: 52px; font-size: 22px; }
   .key.shift-key, .key.backspace-key { max-width: 90px; }
   .key.space-key { max-width: 320px; }
 }
 
-/* Safe area for notch phones */
+/* ── Notch / home indicator ── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .keyboard-section {
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
 }
 
-/* Dark mode */
+/* ── Dark mode ── */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0d1117;
     --header-bg: #0d1b6e;
     --key-bg: #1e2a3a;
-    --key-bg-dark: #111827;
     --key-text: #c5cae9;
     --key-border: #2d3f5a;
     --key-shadow: rgba(0,0,0,0.4);
@@ -348,6 +409,9 @@ header h1 small {
     --shift-active: #3949ab;
   }
 
+  html { background: var(--bg); }
   #output { color: #e8eaf6; }
-  .key .sub { color: #7986cb; }
+  .modal-title { color: #c5cae9; }
+  .modal-body { color: #9fa8da; }
+  .toast { box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
 }

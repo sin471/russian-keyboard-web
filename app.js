@@ -13,42 +13,104 @@ const UPPER = {
   'я':'Я','ч':'Ч','с':'С','м':'М','и':'И','т':'Т','ь':'Ь','б':'Б','ю':'Ю','.':',','ё':'Ё'
 };
 
-let text = '';
 let shiftActive = false;
-let shiftLocked = false; // caps lock via double-tap
+let shiftLocked = false;
 let lastShiftTap = 0;
 
-const outputEl = document.getElementById('output');
+const outputEl   = document.getElementById('output');
 const charCountEl = document.getElementById('char-count');
-const copyBtn = document.getElementById('btn-copy');
-const clearBtn = document.getElementById('btn-clear');
+const copyBtn    = document.getElementById('btn-copy');
+const clearBtn   = document.getElementById('btn-clear');
 const keyboardEl = document.getElementById('keyboard');
+const toastEl    = document.getElementById('toast');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalCancel  = document.getElementById('modal-cancel');
+const modalConfirm = document.getElementById('modal-confirm');
 
-function renderOutput() {
-  outputEl.textContent = text;
-  charCountEl.textContent = `${text.length} 文字`;
-  outputEl.scrollTop = outputEl.scrollHeight;
+// ── Toast ──────────────────────────────────────────────
+let toastTimer = null;
+
+function showToast(message, type = 'success') {
+  toastEl.textContent = message;
+  toastEl.className = `toast toast-${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, 2500);
 }
 
+// ── Modal ──────────────────────────────────────────────
+function showModal() {
+  modalOverlay.classList.add('show');
+}
+
+function hideModal() {
+  modalOverlay.classList.remove('show');
+}
+
+modalCancel.addEventListener('click', hideModal);
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) hideModal();
+});
+modalConfirm.addEventListener('click', () => {
+  outputEl.value = '';
+  updateCharCount();
+  hideModal();
+  showToast('クリアしました', 'success');
+  outputEl.focus();
+});
+
+// ── Char count ─────────────────────────────────────────
+function updateCharCount() {
+  charCountEl.textContent = `${[...outputEl.value].length} 文字`;
+}
+
+outputEl.addEventListener('input', updateCharCount);
+
+// ── Insert at cursor ───────────────────────────────────
+function insertAtCursor(ch) {
+  const start = outputEl.selectionStart;
+  const end   = outputEl.selectionEnd;
+  const val   = outputEl.value;
+  outputEl.value = val.slice(0, start) + ch + val.slice(end);
+  const pos = start + ch.length;
+  outputEl.selectionStart = outputEl.selectionEnd = pos;
+  updateCharCount();
+}
+
+function backspaceAtCursor() {
+  const start = outputEl.selectionStart;
+  const end   = outputEl.selectionEnd;
+  const val   = outputEl.value;
+
+  if (start !== end) {
+    // Delete selection
+    outputEl.value = val.slice(0, start) + val.slice(end);
+    outputEl.selectionStart = outputEl.selectionEnd = start;
+  } else {
+    if (start === 0) return;
+    // Delete grapheme before cursor (handle surrogate pairs)
+    const before = [...val.slice(0, start)];
+    before.pop();
+    const newBefore = before.join('');
+    outputEl.value = newBefore + val.slice(start);
+    outputEl.selectionStart = outputEl.selectionEnd = newBefore.length;
+  }
+  updateCharCount();
+}
+
+// ── Insert from virtual key ────────────────────────────
 function insert(char) {
   const ch = (shiftActive || shiftLocked) ? (UPPER[char] || char.toUpperCase()) : char;
-  text += ch;
+  outputEl.focus();
+  insertAtCursor(ch);
   if (shiftActive && !shiftLocked) {
     shiftActive = false;
     updateShiftState();
   }
-  renderOutput();
 }
 
-function backspace() {
-  if (text.length === 0) return;
-  // Handle surrogate pairs
-  const arr = [...text];
-  arr.pop();
-  text = arr.join('');
-  renderOutput();
-}
-
+// ── Shift / Caps Lock ──────────────────────────────────
 function updateShiftState() {
   const shiftKey = document.querySelector('.shift-key');
   if (!shiftKey) return;
@@ -62,19 +124,15 @@ function updateShiftState() {
     shiftKey.classList.remove('active');
     shiftKey.textContent = '⇧';
   }
-
-  // Update all letter key labels
   document.querySelectorAll('.key[data-char]').forEach(k => {
     const ch = k.dataset.char;
-    const display = (shiftActive || shiftLocked) ? (UPPER[ch] || ch.toUpperCase()) : ch;
-    k.textContent = display;
+    k.textContent = (shiftActive || shiftLocked) ? (UPPER[ch] || ch.toUpperCase()) : ch;
   });
 }
 
 function handleShift() {
   const now = Date.now();
   if (now - lastShiftTap < 400) {
-    // Double tap = caps lock
     shiftLocked = !shiftLocked;
     shiftActive = false;
   } else {
@@ -89,6 +147,7 @@ function handleShift() {
   updateShiftState();
 }
 
+// ── Build keyboard ─────────────────────────────────────
 function buildKeyboard() {
   keyboardEl.innerHTML = '';
 
@@ -104,9 +163,14 @@ function buildKeyboard() {
       if (k === 'shift') {
         btn.className += ' special shift-key';
         btn.textContent = '⇧';
-        btn.addEventListener('pointerdown', e => { e.preventDefault(); handleShift(); btn.classList.add('pressed'); });
-        btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
-        btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          handleShift();
+          btn.classList.add('pressed');
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
+
       } else if (k === 'backspace') {
         btn.className += ' special backspace-key';
         btn.textContent = '⌫';
@@ -114,33 +178,49 @@ function buildKeyboard() {
         btn.addEventListener('pointerdown', e => {
           e.preventDefault();
           btn.classList.add('pressed');
-          backspace();
-          bsInterval = setInterval(backspace, 120);
+          outputEl.focus();
+          backspaceAtCursor();
+          bsInterval = setInterval(() => { outputEl.focus(); backspaceAtCursor(); }, 120);
         });
         const stopBs = () => { clearInterval(bsInterval); btn.classList.remove('pressed'); };
-        btn.addEventListener('pointerup', stopBs);
-        btn.addEventListener('pointercancel', stopBs);
+        btn.addEventListener('pointerup',    stopBs);
+        btn.addEventListener('pointercancel',stopBs);
         btn.addEventListener('pointerleave', stopBs);
+
       } else if (k === 'space') {
         btn.className += ' special space-key';
         btn.textContent = 'スペース';
-        btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.classList.add('pressed'); insert(' '); });
-        btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
-        btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          btn.classList.add('pressed');
+          insert(' ');
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
+
       } else if (k === '—') {
         btn.className += ' special';
         btn.textContent = '—';
         btn.title = 'ダッシュ';
-        btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.classList.add('pressed'); insert('—'); });
-        btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
-        btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          btn.classList.add('pressed');
+          insert('—');
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
+
       } else {
         btn.dataset.char = k;
         btn.textContent = k;
         if (k === 'ё') btn.className += ' yo-key';
-        btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.classList.add('pressed'); insert(k); });
-        btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
-        btn.addEventListener('pointercancel', () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          btn.classList.add('pressed');
+          insert(k);
+        });
+        btn.addEventListener('pointerup',    () => btn.classList.remove('pressed'));
+        btn.addEventListener('pointercancel',() => btn.classList.remove('pressed'));
       }
 
       rowEl.appendChild(btn);
@@ -150,75 +230,38 @@ function buildKeyboard() {
   });
 }
 
-// Copy button
+// ── Copy button ────────────────────────────────────────
 copyBtn.addEventListener('click', async () => {
+  const text = outputEl.value;
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
-    copyBtn.textContent = '✓ コピー済み';
-    copyBtn.classList.add('copied');
-    setTimeout(() => {
-      copyBtn.innerHTML = '📋 コピー';
-      copyBtn.classList.remove('copied');
-    }, 2000);
+    showToast('📋 コピーしました', 'success');
   } catch {
-    // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    copyBtn.textContent = '✓ コピー済み';
-    copyBtn.classList.add('copied');
-    setTimeout(() => {
-      copyBtn.innerHTML = '📋 コピー';
-      copyBtn.classList.remove('copied');
-    }, 2000);
+    showToast('📋 コピーしました', 'success');
   }
 });
 
-// Clear button
+// ── Clear button ───────────────────────────────────────
 clearBtn.addEventListener('click', () => {
-  if (!text) return;
-  if (confirm('テキストをクリアしますか？')) {
-    text = '';
-    renderOutput();
-  }
+  if (!outputEl.value) return;
+  showModal();
 });
 
-// Keyboard shortcut support (physical keyboard)
-document.addEventListener('keydown', e => {
-  if (e.ctrlKey || e.metaKey) return;
-
-  if (e.key === 'Backspace') {
-    e.preventDefault();
-    backspace();
-    return;
-  }
-
-  if (e.key === 'Shift') {
-    handleShift();
-    return;
-  }
-
-  if (e.key === 'CapsLock') {
-    shiftLocked = !shiftLocked;
-    shiftActive = false;
-    updateShiftState();
-    return;
-  }
-});
-
-// PWA service worker
+// ── PWA service worker ─────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 
-// Init
+// ── Init ───────────────────────────────────────────────
 buildKeyboard();
-renderOutput();
+updateCharCount();
