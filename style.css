@@ -419,7 +419,7 @@ header h1 small {
   }
 
   html { background: var(--bg); }
-  #output { color: #e8eaf6; }
+  #output { color: #e8eaf6; caret-color: #c5cae9; }
   .modal-title { color: #c5cae9; }
   .modal-body { color: #9fa8da; }
   .toast { box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
