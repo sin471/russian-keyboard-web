@@ -206,8 +206,14 @@ header h1 small {
   resize: none;
   background: transparent;
   caret-color: var(--accent);
+  caret-width: 2px;
   user-select: text;
   -webkit-user-select: text;
+}
+
+.output-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.15), 0 2px 8px var(--key-shadow);
 }
 
 #output::placeholder {
@@ -366,18 +372,21 @@ header h1 small {
 }
 
 @media (min-width: 900px) {
-  /* Output section centered, keyboard section full-width with bg */
   .output-section {
+    width: 100%;
     max-width: var(--content-max);
     margin: 0 auto;
-    width: 100%;
     padding: 20px 0 12px;
   }
 
+  /* width: 100% is essential — without it the flex child shrinks to content */
   .keyboard {
+    width: 100%;
     max-width: var(--content-max);
     margin: 0 auto;
   }
+
+  .keyboard-section { padding: 8px 0 16px; }
 
   .key { max-width: 64px; height: 52px; font-size: 22px; }
   .key.shift-key, .key.backspace-key { max-width: 90px; }

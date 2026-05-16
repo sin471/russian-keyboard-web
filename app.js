@@ -79,6 +79,7 @@ function insertAtCursor(ch) {
 }
 
 function backspaceAtCursor() {
+  outputEl.focus();
   const start = outputEl.selectionStart;
   const end   = outputEl.selectionEnd;
   const val   = outputEl.value;
@@ -102,7 +103,13 @@ function backspaceAtCursor() {
 // ── Insert from virtual key ────────────────────────────
 function insert(char) {
   const ch = (shiftActive || shiftLocked) ? (UPPER[char] || char.toUpperCase()) : char;
+  // Save cursor position before any possible focus change
+  const savedStart = outputEl.selectionStart;
+  const savedEnd   = outputEl.selectionEnd;
   outputEl.focus();
+  // Restore selection (focus() may reset it to end)
+  outputEl.selectionStart = savedStart;
+  outputEl.selectionEnd   = savedEnd;
   insertAtCursor(ch);
   if (shiftActive && !shiftLocked) {
     shiftActive = false;
@@ -265,3 +272,5 @@ if ('serviceWorker' in navigator) {
 // ── Init ───────────────────────────────────────────────
 buildKeyboard();
 updateCharCount();
+// Auto-focus so cursor is visible from the start
+outputEl.focus();
