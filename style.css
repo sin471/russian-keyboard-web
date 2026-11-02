@@ -277,19 +277,22 @@ header h1 small {
 
 .suggest-bar {
   display: flex;
-  gap: 2px;
-  height: 38px;
-  margin-bottom: 5px;
+  gap: 6px;
+  height: 46px;
+  margin-bottom: 6px;
 }
 
 .suggest-item {
   flex: 1;
   min-width: 0;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--output-border);
+  background: var(--key-bg);
+  border: 1px solid var(--key-border);
+  border-bottom: 3px solid var(--key-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--key-shadow);
   font-family: 'Georgia', serif;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 500;
   color: var(--key-text);
   white-space: nowrap;
   overflow: hidden;
@@ -299,12 +302,13 @@ header h1 small {
   touch-action: manipulation;
 }
 
-.suggest-item:last-child {
-  border-right: none;
+.suggest-item:empty {
+  visibility: hidden;
 }
 
 .suggest-item:active {
-  background: var(--special-key);
+  background: var(--key-active);
+  color: var(--key-active-text);
 }
 
 .keyboard {
