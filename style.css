@@ -290,8 +290,8 @@ header h1 small {
 .key {
   flex: 1;
   min-width: 0;
-  max-width: 52px;
-  height: 42px;
+  max-width: 56px;
+  height: 48px;
   background: var(--key-bg);
   border: 1px solid var(--key-border);
   border-bottom: 3px solid var(--key-border);
@@ -307,7 +307,7 @@ header h1 small {
   box-shadow: 0 1px 3px var(--key-shadow);
   transition: background 0.08s, transform 0.08s;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  touch-action: none;
   position: relative;
   -webkit-user-select: none;
   user-select: none;
@@ -352,7 +352,55 @@ header h1 small {
   font-family: -apple-system, sans-serif;
 }
 
-.key.yo-key { font-size: 14px; }
+.key .key-main {
+  line-height: 1;
+  pointer-events: none;
+}
+
+.key .alt-hint {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+#key-popup {
+  position: fixed;
+  display: none;
+  gap: 2px;
+  padding: 4px;
+  background: var(--output-bg);
+  border: 1px solid var(--key-border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  z-index: 700;
+  pointer-events: none;
+}
+
+#key-popup.show {
+  display: flex;
+}
+
+#key-popup .kp-item {
+  min-width: 36px;
+  height: 42px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-family: 'Georgia', serif;
+  color: var(--key-text);
+  border-radius: 7px;
+}
+
+#key-popup .kp-item.selected {
+  background: var(--key-active);
+  color: var(--key-active-text);
+}
 
 .key.enter-key {
   flex: 1.8;
@@ -384,7 +432,7 @@ header h1 small {
 
   .keyboard-section { padding: 8px 20px 16px; }
 
-  .key { height: 46px; font-size: 20px; max-width: 58px; }
+  .key { height: 52px; font-size: 20px; max-width: 62px; }
   .key.shift-key, .key.backspace-key { max-width: 78px; }
   .key.space-key { max-width: 250px; }
 }
@@ -432,7 +480,7 @@ header h1 small {
     margin: 0 auto;
   }
 
-  .key { max-width: 64px; height: 52px; font-size: 22px; }
+  .key { max-width: 68px; height: 56px; font-size: 22px; }
   .key.shift-key, .key.backspace-key { max-width: 90px; }
   .key.space-key { max-width: 320px; }
 }
