@@ -1,9 +1,10 @@
-const CACHE_NAME = 'ru-keyboard-v2';
+const CACHE_NAME = 'ru-keyboard-v3';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './dict.txt',
   './manifest.json',
   './icon-192.svg',
   './icon-512.svg'

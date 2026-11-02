@@ -36,6 +36,7 @@ const charCountEl = document.getElementById('char-count');
 const copyBtn    = document.getElementById('btn-copy');
 const clearBtn   = document.getElementById('btn-clear');
 const keyboardEl = document.getElementById('keyboard');
+const suggestBar = document.getElementById('suggest-bar');
 const toastEl    = document.getElementById('toast');
 const popupEl    = document.getElementById('key-popup');
 const modalOverlay = document.getElementById('modal-overlay');
@@ -78,15 +79,20 @@ modalConfirm.addEventListener('click', () => {
 // ── Char count ─────────────────────────────────────────
 function updateCharCount() {
   charCountEl.textContent = `${[...outputEl.value].length} 文字`;
+  updateSuggestions();
 }
 
 outputEl.addEventListener('input', updateCharCount);
+outputEl.addEventListener('click', () => updateSuggestions());
+outputEl.addEventListener('keyup', () => updateSuggestions());
 
 // ── Insert at cursor ───────────────────────────────────
 function insertAtCursor(ch) {
   const start = outputEl.selectionStart;
   const end   = outputEl.selectionEnd;
   const val   = outputEl.value;
+  // 区切り文字が入ったら、直前の単語を学習する
+  if (!/[а-яёА-ЯЁ]/.test(ch)) learnWordBefore(val, start);
   outputEl.value = val.slice(0, start) + ch + val.slice(end);
   const pos = start + ch.length;
   outputEl.selectionStart = outputEl.selectionEnd = pos;
@@ -435,6 +441,206 @@ function buildKeyboard() {
 }
 
 keyboardEl.addEventListener('contextmenu', e => e.preventDefault());
+
+// ── Predictions ────────────────────────────────────────
+// 辞書は頻度順の語形リスト（dict.txt）。照合は ё→е に正規化して行う。
+// 候補は前方一致を基本に、足りない分をあいまい検索（編集距離）で埋める。
+let DICT = [];        // 表示形
+let DICT_N = [];      // 正規化形
+let dictReady = false;
+const firstLetterIdx = new Map();  // 正規化1文字目 -> [index...]（頻度順）
+const twoLetterIdx = new Map();    // 正規化2文字prefix -> [index...]
+const NORM2DISPLAY = new Map();    // 正規化形 -> 表示形
+let learned = {};
+try { learned = JSON.parse(localStorage.getItem('ru-kb-learned') || '{}'); } catch { learned = {}; }
+
+// ЙЦУКЕНの物理的な隣接キー（誤打の置換コストを下げるため）
+const NEIGHBORS = (() => {
+  const rows = ['йцукенгшщзх', 'фывапролджэ', 'ячсмитьбю'];
+  const map = new Map();
+  rows.forEach(r => {
+    [...r].forEach((ch, i) => {
+      const set = new Set();
+      if (i > 0) set.add(r[i - 1]);
+      if (i < r.length - 1) set.add(r[i + 1]);
+      map.set(ch, set);
+    });
+  });
+  return map;
+})();
+
+function normalizeWord(w) {
+  return w.toLowerCase().replace(/ё/g, 'е');
+}
+
+function effRank(i) {
+  return i - (learned[DICT[i]] || 0) * 400;
+}
+
+function learnWord(displayWord) {
+  if (!displayWord || displayWord.length < 2) return;
+  learned[displayWord] = (learned[displayWord] || 0) + 1;
+  const keys = Object.keys(learned);
+  if (keys.length > 800) {
+    keys.sort((a, b) => learned[a] - learned[b]);
+    keys.slice(0, keys.length - 800).forEach(k => delete learned[k]);
+  }
+  try { localStorage.setItem('ru-kb-learned', JSON.stringify(learned)); } catch {}
+}
+
+function learnWordBefore(val, pos) {
+  if (!dictReady || pos == null) return;
+  let s = pos;
+  while (s > 0 && /[а-яёА-ЯЁ]/.test(val[s - 1])) s--;
+  if (s === pos) return;
+  const display = NORM2DISPLAY.get(normalizeWord(val.slice(s, pos)));
+  if (display) learnWord(display);
+}
+
+// 重み付き編集距離（Damerau）。隣接キーへの置換は 0.5、入れ替えは 1。
+function editCost(a, b) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return Infinity;
+  let prev2 = null;
+  let prev = new Array(n + 1);
+  let cur = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const sub = a[i - 1] === b[j - 1] ? 0 : (NEIGHBORS.get(a[i - 1])?.has(b[j - 1]) ? 0.5 : 1);
+      let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + sub);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        v = Math.min(v, prev2[j - 2] + 1);
+      }
+      cur[j] = v;
+    }
+    prev2 = prev; prev = cur; cur = new Array(n + 1);
+  }
+  return prev[n];
+}
+
+function currentFragment() {
+  const start = outputEl.selectionStart;
+  const end = outputEl.selectionEnd;
+  if (start == null || start !== end) return null;
+  const val = outputEl.value;
+  let s = start;
+  while (s > 0 && /[а-яёА-ЯЁ]/.test(val[s - 1])) s--;
+  if (s === start) return null;
+  return { text: val.slice(s, start), start: s, end: start };
+}
+
+function computeSuggestions(fragText) {
+  const f = normalizeWord(fragText);
+  const out = [];
+  const seen = new Set();
+
+  // 前方一致（頻度順バケットから集め、学習ブーストで並べ替え）
+  const bucket = (f.length >= 2 ? twoLetterIdx.get(f.slice(0, 2)) : firstLetterIdx.get(f[0])) || [];
+  const prefixHits = [];
+  for (const i of bucket) {
+    if (DICT_N[i].startsWith(f)) {
+      prefixHits.push(i);
+      if (prefixHits.length >= 40) break;
+    }
+  }
+  prefixHits.sort((a, b) => effRank(a) - effRank(b));
+  for (const i of prefixHits) {
+    if (out.length >= 3) break;
+    out.push(i);
+    seen.add(i);
+  }
+
+  // あいまい検索で残りを埋める
+  if (out.length < 3) {
+    const maxCost = f.length <= 5 ? 1.0 : 2.0;
+    const firstChars = new Set([f[0], ...(NEIGHBORS.get(f[0]) || [])]);
+    const pool = new Set();
+    firstChars.forEach(c => (firstLetterIdx.get(c) || []).forEach(i => pool.add(i)));
+    const fuzzy = [];
+    for (const i of pool) {
+      if (seen.has(i)) continue;
+      const w = DICT_N[i];
+      if (w === f) continue;
+      if (Math.abs(w.length - f.length) > 2) continue;
+      const cost = editCost(f, w);
+      if (cost <= maxCost) fuzzy.push([cost, effRank(i), i]);
+    }
+    fuzzy.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    for (const [, , i] of fuzzy) {
+      if (out.length >= 3) break;
+      out.push(i);
+    }
+  }
+
+  const cap = /^[А-ЯЁ]/.test(fragText);
+  return out.map(i => {
+    const w = DICT[i];
+    return cap ? w[0].toUpperCase() + w.slice(1) : w;
+  });
+}
+
+function renderSuggestions(list) {
+  suggestBar.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'suggest-item';
+    const word = list[i];
+    if (word) {
+      btn.textContent = word;
+      btn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        applySuggestion(word);
+      });
+    }
+    suggestBar.appendChild(btn);
+  }
+}
+
+function updateSuggestions() {
+  if (!dictReady || !suggestBar) { renderSuggestions([]); return; }
+  const frag = currentFragment();
+  if (!frag) { renderSuggestions([]); return; }
+  renderSuggestions(computeSuggestions(frag.text));
+}
+
+function applySuggestion(word) {
+  const frag = currentFragment();
+  if (!frag) return;
+  const val = outputEl.value;
+  outputEl.focus();
+  outputEl.value = val.slice(0, frag.start) + word + ' ' + val.slice(frag.end);
+  outputEl.selectionStart = outputEl.selectionEnd = frag.start + word.length + 1;
+  learnWord(NORM2DISPLAY.get(normalizeWord(word)) || word.toLowerCase());
+  updateCharCount();
+}
+
+function loadDict() {
+  if (typeof fetch !== 'function') return;
+  fetch('./dict.txt')
+    .then(r => r.text())
+    .then(text => {
+      DICT = text.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+      DICT_N = DICT.map(normalizeWord);
+      DICT_N.forEach((w, i) => {
+        if (!firstLetterIdx.has(w[0])) firstLetterIdx.set(w[0], []);
+        firstLetterIdx.get(w[0]).push(i);
+        if (w.length >= 2) {
+          const k = w.slice(0, 2);
+          if (!twoLetterIdx.has(k)) twoLetterIdx.set(k, []);
+          twoLetterIdx.get(k).push(i);
+        }
+        if (!NORM2DISPLAY.has(w)) NORM2DISPLAY.set(w, DICT[i]);
+      });
+      dictReady = true;
+      updateSuggestions();
+    })
+    .catch(() => {});
+}
+
+loadDict();
 
 // ── Copy button ────────────────────────────────────────
 copyBtn.addEventListener('click', async () => {

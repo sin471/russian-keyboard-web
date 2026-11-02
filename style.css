@@ -275,6 +275,38 @@ header h1 small {
   border-top: 1px solid var(--output-border);
 }
 
+.suggest-bar {
+  display: flex;
+  gap: 2px;
+  height: 38px;
+  margin-bottom: 5px;
+}
+
+.suggest-item {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--output-border);
+  font-family: 'Georgia', serif;
+  font-size: 16px;
+  color: var(--key-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.suggest-item:last-child {
+  border-right: none;
+}
+
+.suggest-item:active {
+  background: var(--special-key);
+}
+
 .keyboard {
   display: flex;
   flex-direction: column;
