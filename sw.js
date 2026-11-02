@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ru-keyboard-v1';
+const CACHE_NAME = 'ru-keyboard-v2';
 const ASSETS = [
   './',
   './index.html',
