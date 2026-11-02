@@ -24,3 +24,13 @@
 ## 技術
 
 HTML / CSS / JavaScript のみ。ビルド不要。
+
+## 構成（ES モジュール）
+
+- `js/main.js` — 起動・トースト・モーダル・コピー/クリア
+- `js/keyboard.js` — 配列定義・キー生成・長押しポップアップ・シフト
+- `js/editor.js` — テキストエリア操作（挿入・削除・入力中の単語）
+- `js/predict.js` — 予測変換（候補生成・候補バー・学習）
+- `js/dict.js` — 頻度辞書の読み込み・正規化・編集距離
+- `js/state.js` — DOM 参照と共有状態
+- `dict.txt` — 頻度辞書（約12,000語形、FrequencyWords / OpenSubtitles 由来、CC BY-SA）
