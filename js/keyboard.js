@@ -1,4 +1,5 @@
-'use strict';
+import { outputEl, keyboardEl, popupEl, shiftState } from './state.js';
+import { insertAtCursor, backspaceAtCursor, updateCharCount } from './editor.js';
 
 // ── Layout ─────────────────────────────────────────────
 // Gboard式: 1段目11 / 2段目11 / 3段目9キー。
@@ -27,95 +28,9 @@ const UPPER = {
 
 const LONGPRESS_MS = 350;
 
-let shiftActive = false;
-let shiftLocked = false;
-let lastShiftTap = 0;
-
-const outputEl   = document.getElementById('output');
-const charCountEl = document.getElementById('char-count');
-const copyBtn    = document.getElementById('btn-copy');
-const clearBtn   = document.getElementById('btn-clear');
-const keyboardEl = document.getElementById('keyboard');
-const toastEl    = document.getElementById('toast');
-const popupEl    = document.getElementById('key-popup');
-const modalOverlay = document.getElementById('modal-overlay');
-const modalCancel  = document.getElementById('modal-cancel');
-const modalConfirm = document.getElementById('modal-confirm');
-
-// ── Toast ──────────────────────────────────────────────
-let toastTimer = null;
-
-function showToast(message, type = 'success') {
-  toastEl.textContent = message;
-  toastEl.className = `toast toast-${type} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toastEl.classList.remove('show');
-  }, 2500);
-}
-
-// ── Modal ──────────────────────────────────────────────
-function showModal() {
-  modalOverlay.classList.add('show');
-}
-
-function hideModal() {
-  modalOverlay.classList.remove('show');
-}
-
-modalCancel.addEventListener('click', hideModal);
-modalOverlay.addEventListener('click', e => {
-  if (e.target === modalOverlay) hideModal();
-});
-modalConfirm.addEventListener('click', () => {
-  outputEl.value = '';
-  updateCharCount();
-  hideModal();
-  showToast('クリアしました', 'success');
-  outputEl.focus();
-});
-
-// ── Char count ─────────────────────────────────────────
-function updateCharCount() {
-  charCountEl.textContent = `${[...outputEl.value].length} 文字`;
-}
-
-outputEl.addEventListener('input', updateCharCount);
-
-// ── Insert at cursor ───────────────────────────────────
-function insertAtCursor(ch) {
-  const start = outputEl.selectionStart;
-  const end   = outputEl.selectionEnd;
-  const val   = outputEl.value;
-  outputEl.value = val.slice(0, start) + ch + val.slice(end);
-  const pos = start + ch.length;
-  outputEl.selectionStart = outputEl.selectionEnd = pos;
-  updateCharCount();
-}
-
-function backspaceAtCursor() {
-  outputEl.focus();
-  const start = outputEl.selectionStart;
-  const end   = outputEl.selectionEnd;
-  const val   = outputEl.value;
-
-  if (start !== end) {
-    outputEl.value = val.slice(0, start) + val.slice(end);
-    outputEl.selectionStart = outputEl.selectionEnd = start;
-  } else {
-    if (start === 0) return;
-    const before = [...val.slice(0, start)];
-    before.pop();
-    const newBefore = before.join('');
-    outputEl.value = newBefore + val.slice(start);
-    outputEl.selectionStart = outputEl.selectionEnd = newBefore.length;
-  }
-  updateCharCount();
-}
-
 // ── Case ───────────────────────────────────────────────
 function applyCase(ch) {
-  return (shiftActive || shiftLocked) ? (UPPER[ch] || ch.toUpperCase()) : ch;
+  return (shiftState.active || shiftState.locked) ? (UPPER[ch] || ch.toUpperCase()) : ch;
 }
 
 // ── Insert from virtual key ────────────────────────────
@@ -127,8 +42,8 @@ function insert(char) {
   outputEl.selectionStart = savedStart;
   outputEl.selectionEnd   = savedEnd;
   insertAtCursor(ch);
-  if (shiftActive && !shiftLocked) {
-    shiftActive = false;
+  if (shiftState.active && !shiftState.locked) {
+    shiftState.active = false;
     updateShiftState();
   }
 }
@@ -216,7 +131,7 @@ function renderPopupSelection() {
   });
 }
 
-function startLongpress(e, btn, char, insertPos, insertedLen, options) {
+function startLongpress(e, btn, options, insertPos, insertedLen) {
   cancelLongpressTimer();
   if (lp && lp.open) closePopup();
   lp = {
@@ -256,10 +171,10 @@ function finishLongpress(commit) {
 function updateShiftState() {
   const shiftKey = document.querySelector('.shift-key');
   if (shiftKey) {
-    if (shiftLocked) {
+    if (shiftState.locked) {
       shiftKey.classList.add('active');
       shiftKey.textContent = '⇪';
-    } else if (shiftActive) {
+    } else if (shiftState.active) {
       shiftKey.classList.add('active');
       shiftKey.textContent = '⇧';
     } else {
@@ -278,36 +193,33 @@ function updateShiftState() {
 
 function handleShift() {
   const now = Date.now();
-  if (now - lastShiftTap < 400) {
-    shiftLocked = !shiftLocked;
-    shiftActive = false;
+  if (now - shiftState.lastTap < 400) {
+    shiftState.locked = !shiftState.locked;
+    shiftState.active = false;
   } else {
-    if (shiftLocked) {
-      shiftLocked = false;
-      shiftActive = false;
+    if (shiftState.locked) {
+      shiftState.locked = false;
+      shiftState.active = false;
     } else {
-      shiftActive = !shiftActive;
+      shiftState.active = !shiftState.active;
     }
   }
-  lastShiftTap = now;
+  shiftState.lastTap = now;
   updateShiftState();
 }
 
 // ── Build keyboard ─────────────────────────────────────
-function attachPressFx(btn, onDown, onUp) {
+function attachPressFx(btn, onDown) {
   btn.addEventListener('pointerdown', e => {
     btn.classList.add('pressed');
     onDown && onDown(e);
   });
-  const release = e => {
-    btn.classList.remove('pressed');
-    onUp && onUp(e);
-  };
+  const release = () => btn.classList.remove('pressed');
   btn.addEventListener('pointerup', release);
   btn.addEventListener('pointercancel', release);
 }
 
-function buildKeyboard() {
+export function buildKeyboard() {
   keyboardEl.innerHTML = '';
 
   ROWS.forEach(row => {
@@ -407,7 +319,7 @@ function buildKeyboard() {
           const insertPos = outputEl.selectionStart ?? outputEl.value.length;
           insert(k);
           if (options) {
-            startLongpress(e, btn, k, insertPos, applyCase(k).length, options);
+            startLongpress(e, btn, options, insertPos, applyCase(k).length);
           } else if (lp) {
             finishLongpress(false);
           }
@@ -432,43 +344,6 @@ function buildKeyboard() {
 
     keyboardEl.appendChild(rowEl);
   });
+
+  keyboardEl.addEventListener('contextmenu', e => e.preventDefault());
 }
-
-keyboardEl.addEventListener('contextmenu', e => e.preventDefault());
-
-// ── Copy button ────────────────────────────────────────
-copyBtn.addEventListener('click', async () => {
-  const text = outputEl.value;
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast('📋 コピーしました', 'success');
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('📋 コピーしました', 'success');
-  }
-});
-
-// ── Clear button ───────────────────────────────────────
-clearBtn.addEventListener('click', () => {
-  if (!outputEl.value) return;
-  showModal();
-});
-
-// ── PWA service worker ─────────────────────────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
-}
-
-// ── Init ───────────────────────────────────────────────
-buildKeyboard();
-updateCharCount();
-outputEl.focus();
